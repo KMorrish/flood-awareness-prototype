@@ -30,6 +30,17 @@ const HISTORIC_SERVICES = {
   '2022': 'https://services2.arcgis.com/dEKgZETqwmDAh1rP/arcgis/rest/services/Flood_Awareness_Historic_Brisbane_River_and_Creek_Floods_Feb2022/FeatureServer/0'
 };
 
+// Flood depth by risk level (metres)
+const RISK_DEPTHS = {
+  'High': 4,
+  'Medium': 2,
+  'Low': 1,
+  'Very Low': 0.5
+};
+
+// 3D view state
+let sceneView3D = null;
+
 // Risk colours
 const RISK_COLORS = {
   'High': [123, 31, 162, 0.5],      // #7b1fa2
@@ -254,11 +265,24 @@ function initMap() {
     'esri/Basemap',
     'esri/geometry/Extent',
     'esri/symbols/SimpleFillSymbol',
-    'esri/renderers/UniqueValueRenderer'
-  ], function(Map, MapView, FeatureLayer, Basemap, Extent, SimpleFillSymbol, UniqueValueRenderer) {
+    'esri/renderers/UniqueValueRenderer',
+    'esri/views/SceneView',
+    'esri/layers/SceneLayer',
+    'esri/layers/GraphicsLayer',
+    'esri/Graphic',
+    'esri/geometry/Polygon',
+    'esri/symbols/PolygonSymbol3D',
+    'esri/symbols/ExtrudeSymbol3DLayer'
+  ], function(
+    Map, MapView, FeatureLayer, Basemap, Extent, SimpleFillSymbol, UniqueValueRenderer,
+    SceneView, SceneLayer, GraphicsLayer, Graphic, Polygon, PolygonSymbol3D, ExtrudeSymbol3DLayer
+  ) {
 
     // Store references globally
-    window._esriModules = { Map, MapView, FeatureLayer, Basemap, Extent, SimpleFillSymbol, UniqueValueRenderer };
+    window._esriModules = {
+      Map, MapView, FeatureLayer, Basemap, Extent, SimpleFillSymbol, UniqueValueRenderer,
+      SceneView, SceneLayer, GraphicsLayer, Graphic, Polygon, PolygonSymbol3D, ExtrudeSymbol3DLayer
+    };
 
     const map = new Map({
       basemap: 'streets-navigation-vector'
@@ -288,6 +312,37 @@ function initMap() {
     mapView.when(function() {
       mapReady = true;
       console.log('Map ready');
+
+      // Click handler: show popup with 3D link when flood data is visible
+      mapView.popup.autoOpenEnabled = false;
+      mapView.on('click', function(event) {
+        if (!currentFloodLayer) return;
+
+        // Hit-test to see if user clicked on a flood zone
+        mapView.hitTest(event).then(function(response) {
+          var lon = event.mapPoint.longitude.toFixed(5);
+          var lat = event.mapPoint.latitude.toFixed(5);
+          var riskLabel = selectedRisk || 'Unknown';
+          var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '—';
+
+          // Store click point for 3D view centering
+          window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
+
+          mapView.popup.open({
+            title: (selectedSuburb || 'Selected Location'),
+            content:
+              '<div style="font-size:13px;line-height:1.6">' +
+              '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Risk level:</span> ' + riskLabel + '</p>' +
+              '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Indicative depth:</span> ' + depthLabel + '</p>' +
+              '<p style="margin:0 0 10px"><span style="font-weight:600;color:#697077">Location:</span> ' + lat + ', ' + lon + '</p>' +
+              '<a class="popup-3d-link" onclick="open3DView()" href="javascript:void(0)" style="display:inline-flex;align-items:center;gap:4px;background:#1a2744;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;">' +
+              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' +
+              ' View in 3D</a>' +
+              '</div>',
+            location: event.mapPoint
+          });
+        });
+      });
     });
   });
 }
@@ -340,7 +395,8 @@ function showOnMap() {
     definitionExpression: defExpression,
     renderer: renderer,
     opacity: 0.7,
-    title: 'Flood Risk'
+    title: 'Flood Risk',
+    popupEnabled: false
   });
 
   map.add(currentFloodLayer);
@@ -351,11 +407,15 @@ function showOnMap() {
     document.getElementById('map-legend').style.display = 'block';
     document.getElementById('source-section').style.display = 'block';
     document.getElementById('historic-section').style.display = 'block';
+    // Show the View in 3D button
+    document.getElementById('btn-view-3d').classList.add('visible');
   }).catch(() => {
     document.getElementById('map-loading').style.display = 'none';
     document.getElementById('map-legend').style.display = 'block';
     document.getElementById('source-section').style.display = 'block';
     document.getElementById('historic-section').style.display = 'block';
+    // Show the View in 3D button
+    document.getElementById('btn-view-3d').classList.add('visible');
   });
 }
 
@@ -481,3 +541,204 @@ function togglePanel() {
     toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>';
   }
 }
+
+// ======================
+// 3D VIEW
+// ======================
+function open3DView() {
+  // Close any existing 2D popup
+  if (window._mapView) {
+    window._mapView.popup.close();
+  }
+
+  // Determine center: use last click point or current 2D view center
+  var center;
+  if (window._lastClickPoint) {
+    center = window._lastClickPoint;
+  } else if (window._mapView) {
+    var c = window._mapView.center;
+    center = [c.longitude, c.latitude];
+  } else {
+    center = [153.02, -27.47]; // Brisbane CBD fallback
+  }
+
+  // Set modal title
+  var suburbText = selectedSuburb || 'Brisbane';
+  var riskText = selectedRisk || 'Flood';
+  document.getElementById('modal-3d-title-text').textContent = '3D Flood Visualisation — ' + suburbText;
+  document.getElementById('modal-3d-subtitle').textContent =
+    riskText + ' risk · ' + (RISK_DEPTHS[riskText] || 1) + 'm water depth';
+
+  // Show modal
+  var modal = document.getElementById('modal-3d');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Show loading overlay
+  document.getElementById('modal-3d-loading').classList.remove('hidden');
+
+  // Destroy any previous SceneView to free GPU resources
+  if (sceneView3D) {
+    sceneView3D.destroy();
+    sceneView3D = null;
+  }
+
+  // Reset container
+  var container = document.getElementById('sceneViewContainer');
+  container.innerHTML = '';
+
+  // Build the scene
+  build3DScene(center, riskText);
+}
+
+function build3DScene(center, risk) {
+  var modules = window._esriModules;
+  if (!modules || !modules.SceneView) {
+    console.error('3D modules not loaded');
+    return;
+  }
+
+  var {
+    Map, SceneView, SceneLayer, GraphicsLayer,
+    Graphic, Polygon, PolygonSymbol3D, ExtrudeSymbol3DLayer
+  } = modules;
+
+  // Depth for chosen risk level
+  var waterDepth = RISK_DEPTHS[risk] || 1;
+
+  // Create a new Map with elevation ground
+  var scene3DMap = new Map({
+    basemap: 'satellite',
+    ground: 'world-elevation'
+  });
+
+  // OSM 3D Buildings scene layer
+  var buildingsLayer = new SceneLayer({
+    url: 'https://basemaps3d.arcgis.com/arcgis/rest/services/OpenStreetMap3D_Buildings_v1/SceneServer',
+    title: 'Buildings'
+  });
+  scene3DMap.add(buildingsLayer);
+
+  // Water surface: rectangular polygon ~500m x 500m around center
+  // Degrees offset: ~500m at Brisbane latitude (27.5°S)
+  // 1 degree lat ≈ 110,574m  =>  500m ≈ 0.00452°
+  // 1 degree lon ≈ 98,000m   =>  500m ≈ 0.00510°
+  var dLat = 0.00452;
+  var dLon = 0.00510;
+  var cx = center[0];
+  var cy = center[1];
+
+  var waterPolygon = new Polygon({
+    rings: [[
+      [cx - dLon, cy - dLat],
+      [cx + dLon, cy - dLat],
+      [cx + dLon, cy + dLat],
+      [cx - dLon, cy + dLat],
+      [cx - dLon, cy - dLat]
+    ]],
+    spatialReference: { wkid: 4326 }
+  });
+
+  var waterSymbol = new PolygonSymbol3D({
+    symbolLayers: [
+      new ExtrudeSymbol3DLayer({
+        size: waterDepth,
+        material: { color: [0, 120, 200, 0.35] },
+        edges: {
+          type: 'solid',
+          color: [0, 100, 180, 0.6],
+          size: 1
+        }
+      })
+    ]
+  });
+
+  var waterGraphic = new Graphic({
+    geometry: waterPolygon,
+    symbol: waterSymbol
+  });
+
+  var waterLayer = new GraphicsLayer({
+    title: 'Flood Water Surface',
+    elevationInfo: {
+      mode: 'on-the-ground'
+    }
+  });
+  waterLayer.add(waterGraphic);
+  scene3DMap.add(waterLayer);
+
+  // Camera: position above and to the side, looking at center, tilted ~60°
+  var cameraAltitude = 800;
+  var cameraOffsetLon = dLon * 2.5;
+  var cameraOffsetLat = -dLat * 3.0;
+
+  sceneView3D = new SceneView({
+    container: 'sceneViewContainer',
+    map: scene3DMap,
+    camera: {
+      position: {
+        longitude: cx + cameraOffsetLon,
+        latitude: cy + cameraOffsetLat,
+        z: cameraAltitude
+      },
+      tilt: 62,
+      heading: 340
+    },
+    environment: {
+      atmosphere: {
+        quality: 'high'
+      },
+      lighting: {
+        type: 'sun',
+        date: new Date(),
+        directShadowsEnabled: true
+      }
+    },
+    ui: {
+      components: ['zoom', 'navigation-toggle', 'compass']
+    },
+    qualityProfile: 'medium'
+  });
+
+  sceneView3D.when(function() {
+    // Hide loading overlay once scene is ready
+    document.getElementById('modal-3d-loading').classList.add('hidden');
+  }, function(err) {
+    console.error('SceneView error:', err);
+    document.getElementById('modal-3d-loading').classList.add('hidden');
+  });
+}
+
+function close3DView() {
+  var modal = document.getElementById('modal-3d');
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+
+  // Destroy SceneView to release GPU/memory
+  if (sceneView3D) {
+    sceneView3D.destroy();
+    sceneView3D = null;
+  }
+
+  // Clear the container
+  var container = document.getElementById('sceneViewContainer');
+  container.innerHTML = '';
+}
+
+// Close 3D modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var modal = document.getElementById('modal-3d');
+    if (modal && modal.classList.contains('open')) {
+      close3DView();
+    }
+  }
+});
+
+// Close 3D modal when clicking the backdrop
+document.addEventListener('click', function(e) {
+  var modal = document.getElementById('modal-3d');
+  if (modal && modal.classList.contains('open') && e.target === modal) {
+    close3DView();
+  }
+});
