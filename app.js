@@ -1,5 +1,5 @@
 /* ============================================
-   BRISBANE FLOOD AWARENESS MAP — APP LOGIC
+   FLOOD AWARENESS MAP — PROTOTYPE APP LOGIC
    ============================================ */
 
 // ======================
@@ -54,7 +54,7 @@ const INFO_TEXTS = {
   'Very Low': 'A very low-likelihood flood is a rare, extreme event beyond the 1 in 100 year level. While unlikely in any given year, the consequences can be catastrophic when they occur.'
 };
 
-// Brisbane suburbs for autocomplete
+// Suburbs for autocomplete (demo dataset)
 const BRISBANE_SUBURBS = [
   'Acacia Ridge', 'Albion', 'Alderley', 'Algester', 'Annerley', 'Anstead', 'Ascot', 'Ashgrove', 'Aspley', 'Auchenflower',
   'Bald Hills', 'Balmoral', 'Banyo', 'Bardon', 'Bellbowrie', 'Belmont', 'Boondall', 'Bowen Hills', 'Bracken Ridge', 'Bridgeman Downs',

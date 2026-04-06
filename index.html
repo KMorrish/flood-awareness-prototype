@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Brisbane Flood Awareness Map</title>
+  <title>Flood Awareness Map — Prototype</title>
   <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +28,7 @@
         </svg>
         <div class="header-text">
           <span class="header-title">Flood Awareness Map</span>
-          <span class="header-subtitle">Brisbane City Council</span>
+          <span class="header-subtitle">Your Council</span>
         </div>
       </div>
       <nav class="header-nav">
@@ -57,7 +57,7 @@
           <h1>Find out your flood risk</h1>
         </div>
         <div class="hero-card-body">
-          <p class="hero-lead">If you live or work in Brisbane, you may be at risk of flooding.</p>
+          <p class="hero-lead">If you live or work in your local area, you may be at risk of flooding.</p>
           <p>Your home, your family and your community may be vulnerable when it floods. Use this interactive map to understand the flood risks in your area and plan ahead.</p>
           <div class="hero-features">
             <div class="hero-feature">
@@ -92,12 +92,12 @@
           <h2>Find Out My Flood Risk</h2>
         </div>
         <div class="conditions-body">
-          <p>Use this interactive map to see how your suburb can be affected by floods of different likelihood levels in Brisbane.</p>
+          <p>Use this interactive map to see how your suburb can be affected by floods of different likelihood levels in your area.</p>
           <p>This map is best viewed with Chrome, Safari, Firefox or your mobile browser.</p>
           <div class="conditions-divider"></div>
-          <p class="conditions-note">For information on local flooding or flash flooding, or for property-level flood information, please contact Brisbane City Council directly.</p>
+          <p class="conditions-note">For information on local flooding or flash flooding, or for property-level flood information, please contact your local council directly.</p>
           <div class="conditions-divider"></div>
-          <p class="conditions-disclaimer"><strong>Disclaimer:</strong> This is a demonstration prototype. The flood data shown is sourced from Brisbane City Council's publicly available flood awareness datasets and is intended for general awareness purposes only. It does not constitute professional advice.</p>
+          <p class="conditions-disclaimer"><strong>Disclaimer:</strong> This is a demonstration prototype. The flood data shown is sourced from publicly available flood awareness datasets and is intended for general awareness purposes only. It does not constitute professional advice.</p>
           <label class="checkbox-label" for="conditions-check">
             <input type="checkbox" id="conditions-check" onchange="toggleGetStarted()">
             <span class="checkbox-custom"></span>
@@ -119,7 +119,7 @@
         <div class="panel-scroll">
           <!-- Location search -->
           <div class="panel-section">
-            <label class="panel-label">Search for a suburb in Brisbane</label>
+            <label class="panel-label">Search for a suburb</label>
             <div class="search-input-wrapper">
               <input type="text" id="suburb-input" class="search-input" placeholder="Type in your suburb" autocomplete="off">
               <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -287,12 +287,12 @@
   <footer class="site-footer" id="site-footer">
     <div class="footer-inner">
       <div class="footer-left">
-        <span>Data: Brisbane City Council</span>
+        <span>Data: Open Data Portal</span>
         <span class="footer-sep">|</span>
         <span>Powered by ArcGIS</span>
       </div>
       <div class="footer-right">
-        <span>Esri Australia — Sales Demonstration Prototype</span>
+        <span>Demonstration Prototype</span>
       </div>
     </div>
   </footer>

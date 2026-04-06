@@ -1,11 +1,11 @@
-# Flood Awareness Map — Brisbane Prototype
+# Flood Awareness Map — Prototype
 
-A public-facing interactive flood mapping tool built for council use, modelled on the [Hawkesbury-Nepean Valley Flood Map](https://www.ses.nsw.gov.au/hawkesbury-nepean-floods) by NSW SES.
+A public-facing interactive flood mapping tool for local government, modelled on the [Hawkesbury-Nepean Valley Flood Map](https://www.ses.nsw.gov.au/hawkesbury-nepean-floods) by NSW SES.
 
 ## Features
 
 - **Plain language flood risk communication** — "High likelihood — happens often" instead of "1% AEP"
-- **Suburb search** with autocomplete for 130+ Brisbane suburbs
+- **Suburb search** with autocomplete for 130+ suburbs
 - **4 flood likelihood levels** with colour-coded map overlays
 - **Flood source type filters** — River, Creek, Storm Tide, Overland Flow
 - **Historic flood comparison** — toggle 1974, 2011, and 2022 flood extents
@@ -17,11 +17,11 @@ A public-facing interactive flood mapping tool built for council use, modelled o
 
 - [ArcGIS Maps SDK for JavaScript](https://developers.arcgis.com/javascript/latest/) (v4.30)
 - Static HTML / CSS / JS — no build tools or frameworks required
-- All flood data sourced from [Brisbane City Council Open Spatial Data](https://www.spatial-data.brisbane.qld.gov.au/) (public feature services)
+- Flood data sourced from publicly available ArcGIS feature services
 
 ## Data Sources
 
-All data is publicly accessible from Brisbane City Council's ArcGIS feature services:
+The prototype uses publicly accessible ArcGIS feature services:
 
 | Layer | Service URL |
 |---|---|
@@ -47,7 +47,7 @@ app.js
 ```
 
 ### GitHub Pages
-This repo has GitHub Pages enabled. Visit: https://kmorrish.github.io/flood-awareness-prototype/
+This repo has GitHub Pages enabled. Visit the published site from the repository settings.
 
 ### Any web server
 Drop the files into any web server directory, S3 bucket, or Azure Static Web App.
@@ -65,10 +65,9 @@ To adapt for a different council:
 
 ## License
 
-This is a sales demonstration prototype by Esri Australia. Not for production use without appropriate licensing.
+Demonstration prototype. Not for production use without appropriate licensing.
 
 ## Credits
 
-- **Flood data**: Brisbane City Council
 - **Basemaps & SDK**: Esri / ArcGIS
 - **Reference application**: [Hawkesbury-Nepean Valley Flood Map](https://www.ses.nsw.gov.au/hawkesbury-nepean-floods) — NSW SES
