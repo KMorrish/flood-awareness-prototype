@@ -321,34 +321,49 @@ function initMap() {
       mapView.on('click', function(event) {
         if (!currentFloodLayer) return;
 
-        // Hit-test to see if user clicked on a flood zone
-        mapView.hitTest(event).then(function(response) {
-          var lon = event.mapPoint.longitude.toFixed(5);
-          var lat = event.mapPoint.latitude.toFixed(5);
-          var riskLabel = selectedRisk || 'Unknown';
-          var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '—';
+        var lon = event.mapPoint.longitude.toFixed(5);
+        var lat = event.mapPoint.latitude.toFixed(5);
+        var riskLabel = selectedRisk || 'Unknown';
+        var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '\u2014';
 
-          // Store click point for 3D view centering
-          window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
+        // Store click point for 3D view centering
+        window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
 
-          mapView.popup.open({
-            title: (selectedSuburb || 'Selected Location'),
-            content:
-              '<div style="font-size:13px;line-height:1.6">' +
-              '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Risk level:</span> ' + riskLabel + '</p>' +
-              '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Indicative depth:</span> ' + depthLabel + '</p>' +
-              '<p style="margin:0 0 10px"><span style="font-weight:600;color:#697077">Location:</span> ' + lat + ', ' + lon + '</p>' +
-              '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-              '<a class="popup-3d-link" onclick="openParcel3DView()" href="javascript:void(0)" style="display:inline-flex;align-items:center;gap:4px;background:#1a2744;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;">' +
-              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>' +
-              ' Property 3D</a>' +
-              '<a class="popup-3d-link" onclick="open3DView()" href="javascript:void(0)" style="display:inline-flex;align-items:center;gap:4px;background:#243456;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;">' +
-              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' +
-              ' Area 3D</a>' +
-              '</div>' +
-              '</div>',
-            location: event.mapPoint
-          });
+        // Build popup content as a DOM node (bypasses ArcGIS HTML sanitizer)
+        var container = document.createElement('div');
+        container.style.cssText = 'font-size:13px;line-height:1.6';
+
+        var infoHTML = '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Risk level:</span> ' + riskLabel + '</p>' +
+          '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Indicative depth:</span> ' + depthLabel + '</p>' +
+          '<p style="margin:0 0 10px"><span style="font-weight:600;color:#697077">Location:</span> ' + lat + ', ' + lon + '</p>';
+        container.innerHTML = infoHTML;
+
+        // Button row
+        var btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap';
+
+        var btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;cursor:pointer;border:none;color:#fff;';
+
+        // Property 3D button
+        var parcelBtn = document.createElement('button');
+        parcelBtn.style.cssText = btnStyle + 'background:#1a2744;';
+        parcelBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg> Property 3D';
+        parcelBtn.addEventListener('click', function() { openParcel3DView(); });
+        btnRow.appendChild(parcelBtn);
+
+        // Area 3D button
+        var areaBtn = document.createElement('button');
+        areaBtn.style.cssText = btnStyle + 'background:#243456;';
+        areaBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Area 3D';
+        areaBtn.addEventListener('click', function() { open3DView(); });
+        btnRow.appendChild(areaBtn);
+
+        container.appendChild(btnRow);
+
+        mapView.popup.open({
+          title: (selectedSuburb || 'Selected Location'),
+          content: container,
+          location: event.mapPoint
         });
       });
     });
