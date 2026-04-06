@@ -261,7 +261,15 @@
         </div>
         <!-- Basemap toggle -->
         <button class="basemap-toggle" id="basemap-toggle" onclick="toggleBasemap()" title="Toggle satellite/streets view">
-          <img id="basemap-thumb" src="https://js.arcgis.com/4.30/esri/images/basemap/satellite.jpg" alt="Satellite view" width="48" height="48">
+          <div class="basemap-thumb" id="basemap-thumb">
+            <svg viewBox="0 0 48 48" width="48" height="48">
+              <rect width="48" height="48" fill="#2d5016"/>
+              <rect x="0" y="0" width="24" height="24" fill="#3a6b20" opacity="0.7"/>
+              <rect x="24" y="24" width="24" height="24" fill="#4a7a30" opacity="0.6"/>
+              <circle cx="12" cy="12" r="6" fill="#5a8a40" opacity="0.5"/>
+              <path d="M0 30 Q12 20 24 28 Q36 36 48 26 L48 48 L0 48Z" fill="#1a4010" opacity="0.4"/>
+            </svg>
+          </div>
           <span id="basemap-label">Satellite</span>
         </button>
         <!-- Loading indicator -->

@@ -400,12 +400,12 @@ function toggleBasemap() {
   if (currentBasemap === 'streets') {
     window._map.basemap = 'satellite';
     currentBasemap = 'satellite';
-    thumb.src = 'https://js.arcgis.com/4.30/esri/images/basemap/streets.jpg';
+    thumb.innerHTML = '<svg viewBox="0 0 48 48" width="48" height="48"><rect width="48" height="48" fill="#e8e0d8"/><path d="M0 24h48" stroke="#bbb" stroke-width="1"/><path d="M24 0v48" stroke="#bbb" stroke-width="1"/><path d="M0 12h48" stroke="#ddd" stroke-width="0.5"/><path d="M0 36h48" stroke="#ddd" stroke-width="0.5"/><path d="M12 0v48" stroke="#ddd" stroke-width="0.5"/><path d="M36 0v48" stroke="#ddd" stroke-width="0.5"/></svg>';
     label.textContent = 'Streets';
   } else {
     window._map.basemap = 'streets-navigation-vector';
     currentBasemap = 'streets';
-    thumb.src = 'https://js.arcgis.com/4.30/esri/images/basemap/satellite.jpg';
+    thumb.innerHTML = '<svg viewBox="0 0 48 48" width="48" height="48"><rect width="48" height="48" fill="#2d5016"/><rect x="0" y="0" width="24" height="24" fill="#3a6b20" opacity="0.7"/><rect x="24" y="24" width="24" height="24" fill="#4a7a30" opacity="0.6"/><circle cx="12" cy="12" r="6" fill="#5a8a40" opacity="0.5"/><path d="M0 30 Q12 20 24 28 Q36 36 48 26 L48 48 L0 48Z" fill="#1a4010" opacity="0.4"/></svg>';
     label.textContent = 'Satellite';
   }
 }

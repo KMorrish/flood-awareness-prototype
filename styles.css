@@ -911,10 +911,19 @@ a:hover { color: var(--orange-hover); }
   transform: scale(1.05);
 }
 
-.basemap-toggle img {
+.basemap-toggle img,
+.basemap-toggle .basemap-thumb {
   width: 56px;
   height: 56px;
   object-fit: cover;
+  background: var(--gray-200);
+  overflow: hidden;
+}
+
+.basemap-thumb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .basemap-toggle span {
@@ -957,6 +966,16 @@ a:hover { color: var(--orange-hover); }
 /* Panel toggle (mobile) */
 .panel-toggle {
   display: none;
+}
+
+/* Ensure checkbox is accessible but hidden visually */
+.checkbox-label input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  position: absolute;
+  cursor: pointer;
+  z-index: 1;
 }
 
 /* ============================================
@@ -1073,25 +1092,21 @@ a:hover { color: var(--orange-hover); }
 
   .panel-toggle {
     display: flex;
-    position: absolute;
-    bottom: -36px;
+    position: fixed;
+    top: auto;
+    bottom: calc(50dvh - 18px);
     left: 50%;
     transform: translateX(-50%);
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 28px;
     background: var(--white);
     border: 1px solid var(--gray-200);
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-radius: var(--radius-md);
     align-items: center;
     justify-content: center;
     z-index: 150;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     color: var(--gray-500);
-  }
-
-  .panel-left.collapsed .panel-toggle {
-    bottom: 0;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
   }
 
   .panel-right {
