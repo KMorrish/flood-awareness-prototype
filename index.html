@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brisbane Flood Awareness Map</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%231a2744'/><path d='M8 20c2-3 4-5 8-5s6 2 8 5' stroke='%23f57c00' stroke-width='2.5' fill='none'/><path d='M6 24c2-3 5-5 10-5s8 2 10 5' stroke='%234fc3f7' stroke-width='2' fill='none' opacity='.6'/></svg>">
+</head>
+<body>
+  <!-- ============================================ -->
+  <!-- HEADER -->
+  <!-- ============================================ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <svg class="header-logo" viewBox="0 0 40 40" width="40" height="40" aria-label="Council logo">
+          <rect width="40" height="40" rx="6" fill="#fff" opacity="0.15"/>
+          <path d="M8 28c3-5 6-10 12-10s9 5 12 10" stroke="#4fc3f7" stroke-width="2.5" fill="none"/>
+          <path d="M10 26c2-4 5-8 10-8s8 4 10 8" stroke="#81d4fa" stroke-width="1.5" fill="none" opacity="0.7"/>
+          <path d="M12 24c2-3 4-6 8-6s6 3 8 6" stroke="#b3e5fc" stroke-width="1" fill="none" opacity="0.5"/>
+          <circle cx="20" cy="12" r="4" fill="none" stroke="#f57c00" stroke-width="2"/>
+          <circle cx="20" cy="12" r="1.5" fill="#f57c00"/>
+        </svg>
+        <div class="header-text">
+          <span class="header-title">Flood Awareness Map</span>
+          <span class="header-subtitle">Brisbane City Council</span>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <span class="header-nav-label">Sales Demo</span>
+        <span class="header-badge">PROTOTYPE</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 1: HERO / LANDING -->
+  <!-- ============================================ -->
+  <section id="screen-hero" class="screen screen-hero active">
+    <div class="hero-bg">
+      <div class="hero-overlay"></div>
+      <div class="hero-pattern"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-card">
+        <div class="hero-card-header">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#f57c00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          <h1>Find out your flood risk</h1>
+        </div>
+        <div class="hero-card-body">
+          <p class="hero-lead">If you live or work in Brisbane, you may be at risk of flooding.</p>
+          <p>Your home, your family and your community may be vulnerable when it floods. Use this interactive map to understand the flood risks in your area and plan ahead.</p>
+          <div class="hero-features">
+            <div class="hero-feature">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Search by suburb</span>
+            </div>
+            <div class="hero-feature">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+              <span>View risk levels</span>
+            </div>
+            <div class="hero-feature">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span>Compare historic floods</span>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-lg" id="btn-find-risk" onclick="showScreen('screen-conditions')">
+            Find Out My Flood Risk
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 2: CONDITIONS OF USE -->
+  <!-- ============================================ -->
+  <section id="screen-conditions" class="screen screen-conditions">
+    <div class="conditions-wrapper">
+      <div class="conditions-card">
+        <div class="conditions-header">
+          <h2>Find Out My Flood Risk</h2>
+        </div>
+        <div class="conditions-body">
+          <p>Use this interactive map to see how your suburb can be affected by floods of different likelihood levels in Brisbane.</p>
+          <p>This map is best viewed with Chrome, Safari, Firefox or your mobile browser.</p>
+          <div class="conditions-divider"></div>
+          <p class="conditions-note">For information on local flooding or flash flooding, or for property-level flood information, please contact Brisbane City Council directly.</p>
+          <div class="conditions-divider"></div>
+          <p class="conditions-disclaimer"><strong>Disclaimer:</strong> This is a demonstration prototype. The flood data shown is sourced from Brisbane City Council's publicly available flood awareness datasets and is intended for general awareness purposes only. It does not constitute professional advice.</p>
+          <label class="checkbox-label" for="conditions-check">
+            <input type="checkbox" id="conditions-check" onchange="toggleGetStarted()">
+            <span class="checkbox-custom"></span>
+            <span>I agree to the <a href="#" class="link">conditions of use</a></span>
+          </label>
+          <button class="btn btn-primary" id="btn-get-started" disabled onclick="showScreen('screen-app')">Get Started</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 3: MAIN APP (two-panel) -->
+  <!-- ============================================ -->
+  <section id="screen-app" class="screen screen-app">
+    <div class="app-layout">
+      <!-- LEFT PANEL -->
+      <aside class="panel-left" id="panel-left">
+        <div class="panel-scroll">
+          <!-- Location search -->
+          <div class="panel-section">
+            <label class="panel-label">Search for a suburb in Brisbane</label>
+            <div class="search-input-wrapper">
+              <input type="text" id="suburb-input" class="search-input" placeholder="Type in your suburb" autocomplete="off">
+              <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <button class="search-clear" id="search-clear" onclick="clearSuburb()" style="display:none;" aria-label="Clear search">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+              <div class="search-dropdown" id="search-dropdown"></div>
+            </div>
+          </div>
+
+          <!-- Flood likelihood -->
+          <div class="panel-section">
+            <label class="panel-label">Pick a flood likelihood</label>
+            <div class="radio-group" id="radio-group">
+              <label class="radio-option" data-risk="High">
+                <input type="radio" name="flood-risk" value="High">
+                <span class="radio-custom"></span>
+                <span class="radio-text">
+                  <strong>High likelihood</strong>
+                  <small>happens often (~1 in 5 year chance)</small>
+                </span>
+              </label>
+              <label class="radio-option" data-risk="Medium">
+                <input type="radio" name="flood-risk" value="Medium">
+                <span class="radio-custom"></span>
+                <span class="radio-text">
+                  <strong>Medium likelihood</strong>
+                  <small>happens sometimes (~1 in 20 year chance)</small>
+                </span>
+              </label>
+              <label class="radio-option" data-risk="Low">
+                <input type="radio" name="flood-risk" value="Low">
+                <span class="radio-custom"></span>
+                <span class="radio-text">
+                  <strong>Low likelihood</strong>
+                  <small>uncommon (~1 in 100 year chance)</small>
+                </span>
+              </label>
+              <label class="radio-option" data-risk="Very Low">
+                <input type="radio" name="flood-risk" value="Very Low">
+                <span class="radio-custom"></span>
+                <span class="radio-text">
+                  <strong>Very low likelihood</strong>
+                  <small>rare (beyond 1 in 100 year)</small>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Did you know? -->
+          <div class="panel-section">
+            <div class="info-card" id="info-card">
+              <div class="info-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="#f57c00"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">i</text></svg>
+              </div>
+              <div class="info-content">
+                <strong>Did you know?</strong>
+                <p id="info-text">Floods that happen more often are generally smaller. Floods that happen rarely can be much larger and more destructive.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Show on Map button -->
+          <div class="panel-section">
+            <button class="btn btn-primary btn-block" id="btn-show-map" disabled onclick="showOnMap()">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/></svg>
+              Show on Map
+            </button>
+          </div>
+
+          <!-- Flood source type -->
+          <div class="panel-section" id="source-section" style="display:none;">
+            <label class="panel-label">Flood source type</label>
+            <div class="toggle-group" id="source-toggles">
+              <button class="toggle-btn active" data-source="overall" onclick="setFloodSource('overall')">All Types</button>
+              <button class="toggle-btn" data-source="river" onclick="setFloodSource('river')">River</button>
+              <button class="toggle-btn" data-source="creek" onclick="setFloodSource('creek')">Creek</button>
+              <button class="toggle-btn" data-source="storm" onclick="setFloodSource('storm')">Storm Tide</button>
+              <button class="toggle-btn" data-source="overland" onclick="setFloodSource('overland')">Overland Flow</button>
+            </div>
+          </div>
+
+          <!-- Historic floods -->
+          <div class="panel-section" id="historic-section" style="display:none;">
+            <label class="panel-label">Historic flood events</label>
+            <p class="panel-hint">Compare with actual flood extents from past events.</p>
+            <div class="toggle-group" id="historic-toggles">
+              <button class="toggle-btn" data-year="1974" onclick="toggleHistoric('1974')">
+                <span class="toggle-year">1974</span>
+                <small>Jan — Brisbane River</small>
+              </button>
+              <button class="toggle-btn" data-year="2011" onclick="toggleHistoric('2011')">
+                <span class="toggle-year">2011</span>
+                <small>Jan — Brisbane River</small>
+              </button>
+              <button class="toggle-btn" data-year="2022" onclick="toggleHistoric('2022')">
+                <span class="toggle-year">2022</span>
+                <small>Feb — River &amp; Creek</small>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile panel toggle -->
+        <button class="panel-toggle" id="panel-toggle" onclick="togglePanel()" aria-label="Toggle controls panel">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </aside>
+
+      <!-- RIGHT PANEL: MAP -->
+      <div class="panel-right" id="panel-right">
+        <!-- Map instruction overlay -->
+        <div class="map-instruction" id="map-instruction">
+          <div class="map-instruction-inner">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#1a2744" stroke-width="1.5" opacity="0.4">
+              <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/>
+              <path d="M8 2v16M16 6v16"/>
+            </svg>
+            <p>Select options on the left and click <strong>"Show on Map"</strong> to see the flood map.</p>
+          </div>
+        </div>
+        <!-- ArcGIS Map container -->
+        <div id="mapView"></div>
+        <!-- Legend -->
+        <div class="map-legend" id="map-legend" style="display:none;">
+          <div class="legend-header">
+            <strong>Flood Risk Level</strong>
+            <button class="legend-close" onclick="document.getElementById('map-legend').style.display='none'" aria-label="Close legend">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="legend-items">
+            <div class="legend-item"><span class="legend-swatch" style="background:#7b1fa2;"></span> High</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#1565c0;"></span> Medium</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#00897b;"></span> Low</div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a;"></span> Very Low</div>
+            <div class="legend-item legend-item-historic" id="legend-historic" style="display:none;"><span class="legend-swatch" style="background:#ef6c00;"></span> Historic Extent</div>
+          </div>
+        </div>
+        <!-- Basemap toggle -->
+        <button class="basemap-toggle" id="basemap-toggle" onclick="toggleBasemap()" title="Toggle satellite/streets view">
+          <img id="basemap-thumb" src="https://js.arcgis.com/4.30/esri/images/basemap/satellite.jpg" alt="Satellite view" width="48" height="48">
+          <span id="basemap-label">Satellite</span>
+        </button>
+        <!-- Loading indicator -->
+        <div class="map-loading" id="map-loading" style="display:none;">
+          <div class="spinner"></div>
+          <span>Loading flood data...</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- FOOTER -->
+  <!-- ============================================ -->
+  <footer class="site-footer" id="site-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span>Data: Brisbane City Council</span>
+        <span class="footer-sep">|</span>
+        <span>Powered by ArcGIS</span>
+      </div>
+      <div class="footer-right">
+        <span>Esri Australia — Sales Demonstration Prototype</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://js.arcgis.com/4.30/"></script>
+  <script src="app.js"></script>
+</body>
+</html>
