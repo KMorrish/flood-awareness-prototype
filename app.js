@@ -41,6 +41,9 @@ const RISK_DEPTHS = {
 // 3D view state
 let sceneView3D = null;
 
+// Brisbane Buildings service URL
+const BRISBANE_BUILDINGS_URL = 'https://services1.arcgis.com/HrMiNYsSqqPpLTDE/arcgis/rest/services/Brisbane_buildings/FeatureServer/0';
+
 // Risk colours
 const RISK_COLORS = {
   'High': [123, 31, 162, 0.5],      // #7b1fa2
@@ -335,9 +338,14 @@ function initMap() {
               '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Risk level:</span> ' + riskLabel + '</p>' +
               '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Indicative depth:</span> ' + depthLabel + '</p>' +
               '<p style="margin:0 0 10px"><span style="font-weight:600;color:#697077">Location:</span> ' + lat + ', ' + lon + '</p>' +
-              '<a class="popup-3d-link" onclick="open3DView()" href="javascript:void(0)" style="display:inline-flex;align-items:center;gap:4px;background:#1a2744;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;">' +
+              '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+              '<a class="popup-3d-link" onclick="openParcel3DView()" href="javascript:void(0)" style="display:inline-flex;align-items:center;gap:4px;background:#1a2744;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;">' +
+              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>' +
+              ' Property 3D</a>' +
+              '<a class="popup-3d-link" onclick="open3DView()" href="javascript:void(0)" style="display:inline-flex;align-items:center;gap:4px;background:#243456;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;">' +
               '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' +
-              ' View in 3D</a>' +
+              ' Area 3D</a>' +
+              '</div>' +
               '</div>',
             location: event.mapPoint
           });
@@ -723,6 +731,334 @@ function close3DView() {
   // Clear the container
   var container = document.getElementById('sceneViewContainer');
   container.innerHTML = '';
+}
+
+// ======================
+// PARCEL-LEVEL 3D VIEW
+// ======================
+function openParcel3DView() {
+  // Close any existing 2D popup
+  if (window._mapView) {
+    window._mapView.popup.close();
+  }
+
+  // Determine click center
+  var center;
+  if (window._lastClickPoint) {
+    center = window._lastClickPoint;
+  } else if (window._mapView) {
+    var c = window._mapView.center;
+    center = [c.longitude, c.latitude];
+  } else {
+    center = [153.02, -27.47];
+  }
+
+  // Set modal title
+  var suburbText = selectedSuburb || 'Brisbane';
+  var riskText = selectedRisk || 'Flood';
+  document.getElementById('modal-3d-title-text').textContent = 'Property 3D View — ' + suburbText;
+  document.getElementById('modal-3d-subtitle').textContent =
+    riskText + ' risk · ' + (RISK_DEPTHS[riskText] || 1) + 'm water depth · Querying buildings...';
+
+  // Show modal
+  var modal = document.getElementById('modal-3d');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Show loading overlay
+  document.getElementById('modal-3d-loading').classList.remove('hidden');
+
+  // Destroy any previous SceneView
+  if (sceneView3D) {
+    sceneView3D.destroy();
+    sceneView3D = null;
+  }
+
+  // Reset container
+  var container = document.getElementById('sceneViewContainer');
+  container.innerHTML = '';
+
+  // Query Brisbane Buildings for the clicked point and neighbours
+  queryBuildingsAndRender(center, riskText);
+}
+
+function queryBuildingsAndRender(center, risk) {
+  var cx = center[0];
+  var cy = center[1];
+
+  // Step 1: Small envelope ~50m to find the clicked building
+  var dSmall = 0.0005; // ~50m
+  var smallEnvelope = {
+    xmin: cx - dSmall,
+    ymin: cy - dSmall,
+    xmax: cx + dSmall,
+    ymax: cy + dSmall,
+    spatialReference: { wkid: 4326 }
+  };
+
+  // Step 2: Larger envelope ~250m to get neighbours
+  var dLarge = 0.0025; // ~250m
+  var largeEnvelope = {
+    xmin: cx - dLarge,
+    ymin: cy - dLarge,
+    xmax: cx + dLarge,
+    ymax: cy + dLarge,
+    spatialReference: { wkid: 4326 }
+  };
+
+  var baseUrl = BRISBANE_BUILDINGS_URL + '/query';
+  var fields = 'CLASS_NAME,MaxHeight,MinHeight,Ground,OBJECTID';
+
+  // Query both in parallel
+  var smallQuery = fetch(baseUrl + '?where=1%3D1' +
+    '&geometry=' + encodeURIComponent(JSON.stringify(smallEnvelope)) +
+    '&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelIntersects' +
+    '&outFields=' + fields + '&returnGeometry=true&outSR=4326&f=json'
+  ).then(function(r) { return r.json(); });
+
+  var largeQuery = fetch(baseUrl + '?where=1%3D1' +
+    '&geometry=' + encodeURIComponent(JSON.stringify(largeEnvelope)) +
+    '&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelIntersects' +
+    '&outFields=' + fields + '&returnGeometry=true&outSR=4326&resultRecordCount=100&f=json'
+  ).then(function(r) { return r.json(); });
+
+  Promise.all([smallQuery, largeQuery]).then(function(results) {
+    var nearFeatures = results[0].features || [];
+    var allFeatures = results[1].features || [];
+
+    if (allFeatures.length === 0) {
+      // No Brisbane Buildings coverage here — fall back to area 3D view
+      document.getElementById('modal-3d-subtitle').textContent =
+        risk + ' risk · No detailed building data at this location — showing area view';
+      build3DScene(center, risk);
+      return;
+    }
+
+    // Find the closest building to the click point from the small query
+    var selectedOID = null;
+    if (nearFeatures.length > 0) {
+      // Pick the building whose centroid is closest to click
+      var bestDist = Infinity;
+      nearFeatures.forEach(function(f) {
+        var centroid = getBuildingCentroid(f.geometry);
+        var dist = Math.pow(centroid[0] - center[0], 2) + Math.pow(centroid[1] - center[1], 2);
+        if (dist < bestDist) {
+          bestDist = dist;
+          selectedOID = f.attributes.OBJECTID;
+        }
+      });
+    } else {
+      // No building at click point — just pick closest from the large set
+      var bestDist = Infinity;
+      allFeatures.forEach(function(f) {
+        var centroid = getBuildingCentroid(f.geometry);
+        var dist = Math.pow(centroid[0] - center[0], 2) + Math.pow(centroid[1] - center[1], 2);
+        if (dist < bestDist) {
+          bestDist = dist;
+          selectedOID = f.attributes.OBJECTID;
+        }
+      });
+    }
+
+    // Update subtitle with building info
+    var selectedBuilding = allFeatures.find(function(f) { return f.attributes.OBJECTID === selectedOID; });
+    if (selectedBuilding) {
+      var height = selectedBuilding.attributes.MaxHeight;
+      var ground = selectedBuilding.attributes.Ground;
+      document.getElementById('modal-3d-subtitle').textContent =
+        risk + ' risk · ' + (RISK_DEPTHS[risk] || 1) + 'm water depth · Building height: ' + (height ? height.toFixed(1) + 'm' : '—');
+    }
+
+    // Build the 3D parcel scene
+    buildParcel3DScene(center, risk, allFeatures, selectedOID);
+  }).catch(function(err) {
+    console.error('Building query failed:', err);
+    // Fall back to area view
+    document.getElementById('modal-3d-subtitle').textContent =
+      risk + ' risk · Building query failed — showing area view';
+    build3DScene(center, risk);
+  });
+}
+
+function getBuildingCentroid(geometry) {
+  if (!geometry || !geometry.rings || !geometry.rings[0]) return [0, 0];
+  var ring = geometry.rings[0];
+  var sumX = 0, sumY = 0;
+  for (var i = 0; i < ring.length; i++) {
+    sumX += ring[i][0];
+    sumY += ring[i][1];
+  }
+  return [sumX / ring.length, sumY / ring.length];
+}
+
+function buildParcel3DScene(center, risk, buildings, selectedOID) {
+  var modules = window._esriModules;
+  if (!modules || !modules.SceneView) {
+    console.error('3D modules not loaded');
+    return;
+  }
+
+  var {
+    Map, SceneView, GraphicsLayer, Graphic, Polygon, PolygonSymbol3D, ExtrudeSymbol3DLayer
+  } = modules;
+
+  var waterDepth = RISK_DEPTHS[risk] || 1;
+
+  // Create map
+  var scene3DMap = new Map({
+    basemap: 'satellite',
+    ground: 'world-elevation'
+  });
+
+  // === Buildings layer ===
+  var buildingGraphics = new GraphicsLayer({
+    title: 'Buildings',
+    elevationInfo: {
+      mode: 'on-the-ground'
+    }
+  });
+
+  buildings.forEach(function(feat) {
+    var oid = feat.attributes.OBJECTID;
+    var isSelected = (oid === selectedOID);
+    var maxH = feat.attributes.MaxHeight || 10;
+    var minH = feat.attributes.MinHeight || 0;
+    var buildingHeight = maxH - minH;
+    if (buildingHeight < 3) buildingHeight = 3; // minimum visible height
+
+    var geom = feat.geometry;
+    if (!geom || !geom.rings) return;
+
+    var polygon = new Polygon({
+      rings: geom.rings,
+      spatialReference: { wkid: 4326 }
+    });
+
+    // Selected building: vibrant orange; neighbours: muted grey
+    var fillColor = isSelected ? [245, 124, 0, 0.9] : [180, 185, 190, 0.6];
+    var edgeColor = isSelected ? [200, 90, 0, 1.0] : [140, 145, 150, 0.5];
+    var edgeSize = isSelected ? 1.5 : 0.5;
+
+    var symbol = new PolygonSymbol3D({
+      symbolLayers: [
+        new ExtrudeSymbol3DLayer({
+          size: buildingHeight,
+          material: { color: fillColor },
+          edges: {
+            type: 'solid',
+            color: edgeColor,
+            size: edgeSize
+          }
+        })
+      ]
+    });
+
+    var graphic = new Graphic({
+      geometry: polygon,
+      symbol: symbol,
+      attributes: feat.attributes
+    });
+
+    buildingGraphics.add(graphic);
+  });
+
+  scene3DMap.add(buildingGraphics);
+
+  // === Water surface ===
+  var dLat = 0.003;
+  var dLon = 0.0035;
+  var cx = center[0];
+  var cy = center[1];
+
+  var waterPolygon = new Polygon({
+    rings: [[
+      [cx - dLon, cy - dLat],
+      [cx + dLon, cy - dLat],
+      [cx + dLon, cy + dLat],
+      [cx - dLon, cy + dLat],
+      [cx - dLon, cy - dLat]
+    ]],
+    spatialReference: { wkid: 4326 }
+  });
+
+  var waterSymbol = new PolygonSymbol3D({
+    symbolLayers: [
+      new ExtrudeSymbol3DLayer({
+        size: waterDepth,
+        material: { color: [0, 120, 200, 0.3] },
+        edges: {
+          type: 'solid',
+          color: [0, 100, 180, 0.4],
+          size: 0.5
+        }
+      })
+    ]
+  });
+
+  var waterGraphic = new Graphic({
+    geometry: waterPolygon,
+    symbol: waterSymbol
+  });
+
+  var waterLayer = new GraphicsLayer({
+    title: 'Flood Water',
+    elevationInfo: { mode: 'on-the-ground' }
+  });
+  waterLayer.add(waterGraphic);
+  scene3DMap.add(waterLayer);
+
+  // === Camera: close-in view focused on selected building ===
+  // Find the selected building centroid for camera target
+  var camTarget = center;
+  var selectedFeat = buildings.find(function(f) { return f.attributes.OBJECTID === selectedOID; });
+  if (selectedFeat && selectedFeat.geometry) {
+    camTarget = getBuildingCentroid(selectedFeat.geometry);
+  }
+
+  var selectedHeight = 10;
+  if (selectedFeat) {
+    selectedHeight = (selectedFeat.attributes.MaxHeight || 10) - (selectedFeat.attributes.MinHeight || 0);
+    if (selectedHeight < 5) selectedHeight = 5;
+  }
+
+  // Camera altitude scales with building height for good framing
+  var cameraAlt = Math.max(selectedHeight * 3, 150);
+  var cameraOffset = 0.001; // ~100m offset
+
+  sceneView3D = new SceneView({
+    container: 'sceneViewContainer',
+    map: scene3DMap,
+    camera: {
+      position: {
+        longitude: camTarget[0] + cameraOffset,
+        latitude: camTarget[1] - cameraOffset * 1.2,
+        z: cameraAlt
+      },
+      tilt: 65,
+      heading: 340
+    },
+    environment: {
+      atmosphere: {
+        quality: 'high'
+      },
+      lighting: {
+        type: 'sun',
+        date: new Date(),
+        directShadowsEnabled: true
+      }
+    },
+    ui: {
+      components: ['zoom', 'navigation-toggle', 'compass']
+    },
+    qualityProfile: 'medium'
+  });
+
+  sceneView3D.when(function() {
+    document.getElementById('modal-3d-loading').classList.add('hidden');
+  }, function(err) {
+    console.error('Parcel SceneView error:', err);
+    document.getElementById('modal-3d-loading').classList.add('hidden');
+  });
 }
 
 // Close 3D modal on Escape key
