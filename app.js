@@ -258,6 +258,120 @@ function updateShowButton() {
 }
 
 // ======================
+// CUSTOM MAP POPUP
+// ======================
+function _createCustomPopup(view) {
+  // Create a custom popup overlay that sits on top of the map
+  var overlay = document.createElement('div');
+  overlay.id = 'custom-popup';
+  overlay.style.cssText = 'display:none;position:absolute;z-index:50;pointer-events:auto;' +
+    'background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.18);' +
+    'padding:16px 18px 14px;min-width:220px;max-width:300px;font-family:inherit;';
+
+  // Title
+  var titleEl = document.createElement('div');
+  titleEl.id = 'custom-popup-title';
+  titleEl.style.cssText = 'font-weight:700;font-size:14px;color:#1a2744;margin:0 0 8px;padding-right:22px;';
+  overlay.appendChild(titleEl);
+
+  // Body
+  var bodyEl = document.createElement('div');
+  bodyEl.id = 'custom-popup-body';
+  overlay.appendChild(bodyEl);
+
+  // Close button
+  var closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;' +
+    'font-size:18px;color:#697077;line-height:1;padding:2px 6px;border-radius:4px;';
+  closeBtn.innerHTML = '\u00d7';
+  closeBtn.addEventListener('click', function() {
+    overlay.style.display = 'none';
+  });
+  overlay.appendChild(closeBtn);
+
+  // Append to the mapView container
+  var mapContainer = document.getElementById('mapView');
+  mapContainer.style.position = 'relative';
+  mapContainer.appendChild(overlay);
+}
+
+function _showCustomPopup(view, mapPoint, title, risk, depth, lat, lon) {
+  var overlay = document.getElementById('custom-popup');
+  if (!overlay) return;
+
+  // Set title
+  document.getElementById('custom-popup-title').textContent = title;
+
+  // Build body
+  var body = document.getElementById('custom-popup-body');
+  body.innerHTML = '';
+  body.style.cssText = 'font-size:13px;line-height:1.6;';
+
+  var infoHTML = '<p style="margin:0 0 5px"><span style="font-weight:600;color:#697077">Risk level:</span> ' + risk + '</p>' +
+    '<p style="margin:0 0 5px"><span style="font-weight:600;color:#697077">Indicative depth:</span> ' + depth + '</p>' +
+    '<p style="margin:0 0 10px"><span style="font-weight:600;color:#697077">Location:</span> ' + lat + ', ' + lon + '</p>';
+  
+  var infoDiv = document.createElement('div');
+  infoDiv.innerHTML = infoHTML;
+  body.appendChild(infoDiv);
+
+  // Button row
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;';
+
+  var btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:7px 14px;border-radius:5px;' +
+    'font-size:12px;font-weight:600;cursor:pointer;border:none;color:#fff;transition:opacity 0.15s;';
+
+  // Property 3D button
+  var parcelBtn = document.createElement('button');
+  parcelBtn.style.cssText = btnStyle + 'background:#1a2744;';
+  parcelBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">' +
+    '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg> Property 3D';
+  parcelBtn.addEventListener('mouseenter', function() { this.style.opacity = '0.85'; });
+  parcelBtn.addEventListener('mouseleave', function() { this.style.opacity = '1'; });
+  parcelBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    overlay.style.display = 'none';
+    openParcel3DView();
+  });
+  btnRow.appendChild(parcelBtn);
+
+  // Area 3D button
+  var areaBtn = document.createElement('button');
+  areaBtn.style.cssText = btnStyle + 'background:#3a5a8c;';
+  areaBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">' +
+    '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Area 3D';
+  areaBtn.addEventListener('mouseenter', function() { this.style.opacity = '0.85'; });
+  areaBtn.addEventListener('mouseleave', function() { this.style.opacity = '1'; });
+  areaBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    overlay.style.display = 'none';
+    open3DView();
+  });
+  btnRow.appendChild(areaBtn);
+
+  body.appendChild(btnRow);
+
+  // Position the popup at the screen coordinates of the click
+  var screenPoint = view.toScreen(mapPoint);
+  var mapContainer = document.getElementById('mapView');
+  var mapRect = mapContainer.getBoundingClientRect();
+
+  // Offset so popup appears above click point
+  var popupX = screenPoint.x - 140; // center roughly
+  var popupY = screenPoint.y - 10; // slightly above
+
+  // Keep within map bounds
+  if (popupX < 10) popupX = 10;
+  if (popupX + 300 > mapRect.width) popupX = mapRect.width - 310;
+  if (popupY < 10) popupY = 10;
+
+  overlay.style.left = popupX + 'px';
+  overlay.style.top = popupY + 'px';
+  overlay.style.display = 'block';
+}
+
+// ======================
 // MAP INITIALIZATION
 // ======================
 function initMap() {
@@ -304,8 +418,7 @@ function initMap() {
         components: ['zoom', 'attribution']
       },
       popup: {
-        dockEnabled: false,
-        collapseEnabled: false
+        autoOpenEnabled: false
       }
     });
 
@@ -316,8 +429,11 @@ function initMap() {
       mapReady = true;
       console.log('Map ready');
 
-      // Click handler: show popup with 3D link when flood data is visible
-      mapView.popup.autoOpenEnabled = false;
+      // Click handler: show custom popup with 3D buttons when flood data is visible
+      // Using a custom HTML popup instead of ArcGIS popup (v4.30 deprecated view.popup)
+      mapView.popupEnabled = false;
+      _createCustomPopup(mapView);
+
       mapView.on('click', function(event) {
         if (!currentFloodLayer) return;
 
@@ -329,42 +445,7 @@ function initMap() {
         // Store click point for 3D view centering
         window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
 
-        // Build popup content as a DOM node (bypasses ArcGIS HTML sanitizer)
-        var container = document.createElement('div');
-        container.style.cssText = 'font-size:13px;line-height:1.6';
-
-        var infoHTML = '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Risk level:</span> ' + riskLabel + '</p>' +
-          '<p style="margin:0 0 6px"><span style="font-weight:600;color:#697077">Indicative depth:</span> ' + depthLabel + '</p>' +
-          '<p style="margin:0 0 10px"><span style="font-weight:600;color:#697077">Location:</span> ' + lat + ', ' + lon + '</p>';
-        container.innerHTML = infoHTML;
-
-        // Button row
-        var btnRow = document.createElement('div');
-        btnRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap';
-
-        var btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;cursor:pointer;border:none;color:#fff;';
-
-        // Property 3D button
-        var parcelBtn = document.createElement('button');
-        parcelBtn.style.cssText = btnStyle + 'background:#1a2744;';
-        parcelBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg> Property 3D';
-        parcelBtn.addEventListener('click', function() { openParcel3DView(); });
-        btnRow.appendChild(parcelBtn);
-
-        // Area 3D button
-        var areaBtn = document.createElement('button');
-        areaBtn.style.cssText = btnStyle + 'background:#243456;';
-        areaBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Area 3D';
-        areaBtn.addEventListener('click', function() { open3DView(); });
-        btnRow.appendChild(areaBtn);
-
-        container.appendChild(btnRow);
-
-        mapView.popup.open({
-          title: (selectedSuburb || 'Selected Location'),
-          content: container,
-          location: event.mapPoint
-        });
+        _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon);
       });
     });
   });
@@ -752,10 +833,9 @@ function close3DView() {
 // PARCEL-LEVEL 3D VIEW
 // ======================
 function openParcel3DView() {
-  // Close any existing 2D popup
-  if (window._mapView) {
-    window._mapView.popup.close();
-  }
+  // Close any existing custom popup
+  var customPopup = document.getElementById('custom-popup');
+  if (customPopup) customPopup.style.display = 'none';
 
   // Determine click center
   var center;
