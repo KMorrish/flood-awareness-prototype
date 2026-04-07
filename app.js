@@ -297,6 +297,14 @@ function _showSuburbBoundary(suburbName) {
     layer.add(graphic);
     suburbBoundaryGraphic = graphic;
 
+    // Show the boundary banner
+    var banner = document.getElementById('boundary-banner');
+    var bannerName = document.getElementById('boundary-banner-name');
+    if (banner && bannerName) {
+      bannerName.textContent = suburbName;
+      banner.classList.add('visible');
+    }
+
     // Zoom to the suburb boundary
     if (window._mapView) {
       window._mapView.goTo(polygon.extent.expand(1.3), { duration: 600 });
@@ -310,6 +318,27 @@ function _clearSuburbBoundary() {
   var layer = window._suburbBoundaryLayer;
   if (layer) layer.removeAll();
   suburbBoundaryGraphic = null;
+  // Hide the banner
+  var banner = document.getElementById('boundary-banner');
+  if (banner) banner.classList.remove('visible');
+}
+
+// Called when user clicks "Clear" on the boundary banner
+function clearBoundaryMode() {
+  _clearSuburbBoundary();
+
+  // Show a brief hint that they can now click for property 3D
+  if (currentFloodLayer) {
+    var hint = document.getElementById('map-click-hint');
+    if (hint) {
+      hint.classList.remove('visible');
+      // Re-trigger animation
+      void hint.offsetWidth;
+      hint.classList.add('visible');
+      // Remove after animation completes
+      setTimeout(function() { hint.classList.remove('visible'); }, 3200);
+    }
+  }
 }
 
 // ======================
@@ -357,6 +386,14 @@ function _selectSuburbByMapClick(lon, lat) {
 
     layer.add(graphic);
     suburbBoundaryGraphic = graphic;
+
+    // Show the boundary banner
+    var banner = document.getElementById('boundary-banner');
+    var bannerName = document.getElementById('boundary-banner-name');
+    if (banner && bannerName) {
+      bannerName.textContent = name;
+      banner.classList.add('visible');
+    }
 
     // Zoom to the suburb
     if (window._mapView) {
@@ -589,16 +626,17 @@ function initMap() {
         // Store click point for 3D view centering
         window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
 
-        // Always select the suburb under the click
-        _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
-
-        // If flood data is visible, also show the detail popup
-        if (currentFloodLayer) {
+        if (!suburbBoundaryGraphic && currentFloodLayer) {
+          // Boundary cleared + flood data visible → property exploration mode
+          // Show the detail popup with Property 3D / Area 3D buttons
           var lon = event.mapPoint.longitude.toFixed(5);
           var lat = event.mapPoint.latitude.toFixed(5);
           var riskLabel = selectedRisk || 'Unknown';
           var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '\u2014';
           _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon);
+        } else {
+          // Suburb selection mode — click to pick a suburb
+          _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
         }
       });
     });

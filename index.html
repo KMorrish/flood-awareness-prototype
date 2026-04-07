@@ -259,6 +259,22 @@
             <div class="legend-item legend-item-historic" id="legend-historic" style="display:none;"><span class="legend-swatch" style="background:#ef6c00;"></span> Historic Extent</div>
           </div>
         </div>
+        <!-- Suburb boundary banner -->
+        <div class="boundary-banner" id="boundary-banner">
+          <div class="boundary-banner-text">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="boundary-banner-name">Suburb selected</span>
+          </div>
+          <button class="boundary-banner-clear" onclick="clearBoundaryMode()" title="Clear boundary to explore properties">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            Clear
+          </button>
+        </div>
+        <!-- Click hint (shown briefly after clearing boundary) -->
+        <div class="map-click-hint" id="map-click-hint">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2z"/></svg>
+          Click the map to explore properties in 3D
+        </div>
         <!-- View in 3D button -->
         <button class="btn-view-3d" id="btn-view-3d" onclick="open3DView()" title="View current location in 3D">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
