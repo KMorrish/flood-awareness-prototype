@@ -44,6 +44,12 @@ let sceneView3D = null;
 // Brisbane Buildings service URL
 const BRISBANE_BUILDINGS_URL = 'https://services1.arcgis.com/HrMiNYsSqqPpLTDE/arcgis/rest/services/Brisbane_buildings/FeatureServer/0';
 
+// Brisbane Buildings coverage extent (WGS84) — CBD + inner suburbs only
+const BUILDINGS_EXTENT = {
+  xmin: 153.0107, ymin: -27.4793,
+  xmax: 153.0547, ymax: -27.4338
+};
+
 // Risk colours
 const RISK_COLORS = {
   'High': [123, 31, 162, 0.5],      // #7b1fa2
@@ -295,7 +301,7 @@ function _createCustomPopup(view) {
   mapContainer.appendChild(overlay);
 }
 
-function _showCustomPopup(view, mapPoint, title, risk, depth, lat, lon) {
+function _showCustomPopup(view, mapPoint, title, risk, depth, lat, lon, clickLon, clickLat) {
   var overlay = document.getElementById('custom-popup');
   if (!overlay) return;
 
@@ -322,19 +328,25 @@ function _showCustomPopup(view, mapPoint, title, risk, depth, lat, lon) {
   var btnStyle = 'display:inline-flex;align-items:center;gap:4px;padding:7px 14px;border-radius:5px;' +
     'font-size:12px;font-weight:600;cursor:pointer;border:none;color:#fff;transition:opacity 0.15s;';
 
-  // Property 3D button
-  var parcelBtn = document.createElement('button');
-  parcelBtn.style.cssText = btnStyle + 'background:#1a2744;';
-  parcelBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">' +
-    '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg> Property 3D';
-  parcelBtn.addEventListener('mouseenter', function() { this.style.opacity = '0.85'; });
-  parcelBtn.addEventListener('mouseleave', function() { this.style.opacity = '1'; });
-  parcelBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    overlay.style.display = 'none';
-    openParcel3DView();
-  });
-  btnRow.appendChild(parcelBtn);
+  // Check if click is within Brisbane Buildings coverage
+  var inCoverage = clickLon >= BUILDINGS_EXTENT.xmin && clickLon <= BUILDINGS_EXTENT.xmax &&
+    clickLat >= BUILDINGS_EXTENT.ymin && clickLat <= BUILDINGS_EXTENT.ymax;
+
+  // Property 3D button — only if within building data coverage
+  if (inCoverage) {
+    var parcelBtn = document.createElement('button');
+    parcelBtn.style.cssText = btnStyle + 'background:#1a2744;';
+    parcelBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">' +
+      '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg> Property 3D';
+    parcelBtn.addEventListener('mouseenter', function() { this.style.opacity = '0.85'; });
+    parcelBtn.addEventListener('mouseleave', function() { this.style.opacity = '1'; });
+    parcelBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      overlay.style.display = 'none';
+      openParcel3DView();
+    });
+    btnRow.appendChild(parcelBtn);
+  }
 
   // Area 3D button
   var areaBtn = document.createElement('button');
@@ -445,7 +457,7 @@ function initMap() {
         // Store click point for 3D view centering
         window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
 
-        _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon);
+        _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon, event.mapPoint.longitude, event.mapPoint.latitude);
       });
     });
   });
@@ -958,10 +970,12 @@ function queryBuildingsAndRender(center, risk) {
     // Update subtitle with building info
     var selectedBuilding = allFeatures.find(function(f) { return f.attributes.OBJECTID === selectedOID; });
     if (selectedBuilding) {
-      var height = selectedBuilding.attributes.MaxHeight;
-      var ground = selectedBuilding.attributes.Ground;
+      var bH = selectedBuilding.attributes.MaxHeight || 0;
+      var bMin = selectedBuilding.attributes.MinHeight || 0;
+      var bldgH = (bH - bMin).toFixed(0);
+      var wDepth = RISK_DEPTHS[risk] || 1;
       document.getElementById('modal-3d-subtitle').textContent =
-        risk + ' risk · ' + (RISK_DEPTHS[risk] || 1) + 'm water depth · Building height: ' + (height ? height.toFixed(1) + 'm' : '—');
+        risk + ' risk · Water: ' + wDepth + 'm · Building: ' + bldgH + 'm tall · ' + allFeatures.length + ' nearby';
     }
 
     // Build the 3D parcel scene
@@ -999,18 +1013,28 @@ function buildParcel3DScene(center, risk, buildings, selectedOID) {
 
   var waterDepth = RISK_DEPTHS[risk] || 1;
 
-  // Create map
+  // Dark basemap for property view (distinct from satellite Area 3D)
   var scene3DMap = new Map({
-    basemap: 'satellite',
+    basemap: 'dark-gray-vector',
     ground: 'world-elevation'
   });
+
+  // Find selected building first for camera positioning
+  var selectedFeat = buildings.find(function(f) { return f.attributes.OBJECTID === selectedOID; });
+  var camTarget = center;
+  if (selectedFeat && selectedFeat.geometry) {
+    camTarget = getBuildingCentroid(selectedFeat.geometry);
+  }
+  var selectedHeight = 10;
+  if (selectedFeat) {
+    selectedHeight = (selectedFeat.attributes.MaxHeight || 10) - (selectedFeat.attributes.MinHeight || 0);
+    if (selectedHeight < 5) selectedHeight = 5;
+  }
 
   // === Buildings layer ===
   var buildingGraphics = new GraphicsLayer({
     title: 'Buildings',
-    elevationInfo: {
-      mode: 'on-the-ground'
-    }
+    elevationInfo: { mode: 'on-the-ground' }
   });
 
   buildings.forEach(function(feat) {
@@ -1019,7 +1043,7 @@ function buildParcel3DScene(center, risk, buildings, selectedOID) {
     var maxH = feat.attributes.MaxHeight || 10;
     var minH = feat.attributes.MinHeight || 0;
     var buildingHeight = maxH - minH;
-    if (buildingHeight < 3) buildingHeight = 3; // minimum visible height
+    if (buildingHeight < 3) buildingHeight = 3;
 
     var geom = feat.geometry;
     if (!geom || !geom.rings) return;
@@ -1029,41 +1053,42 @@ function buildParcel3DScene(center, risk, buildings, selectedOID) {
       spatialReference: { wkid: 4326 }
     });
 
-    // Selected building: vibrant orange; neighbours: muted grey
-    var fillColor = isSelected ? [245, 124, 0, 0.9] : [180, 185, 190, 0.6];
-    var edgeColor = isSelected ? [200, 90, 0, 1.0] : [140, 145, 150, 0.5];
-    var edgeSize = isSelected ? 1.5 : 0.5;
+    // Selected: bright orange with strong edges. Neighbours: dark translucent
+    var fillColor, edgeColor, edgeSize;
+    if (isSelected) {
+      fillColor = [245, 124, 0, 0.95];
+      edgeColor = [255, 160, 50, 1.0];
+      edgeSize = 2;
+    } else {
+      fillColor = [80, 85, 95, 0.4];
+      edgeColor = [120, 125, 135, 0.3];
+      edgeSize = 0.5;
+    }
 
     var symbol = new PolygonSymbol3D({
       symbolLayers: [
         new ExtrudeSymbol3DLayer({
           size: buildingHeight,
           material: { color: fillColor },
-          edges: {
-            type: 'solid',
-            color: edgeColor,
-            size: edgeSize
-          }
+          edges: { type: 'solid', color: edgeColor, size: edgeSize }
         })
       ]
     });
 
-    var graphic = new Graphic({
+    buildingGraphics.add(new Graphic({
       geometry: polygon,
       symbol: symbol,
       attributes: feat.attributes
-    });
-
-    buildingGraphics.add(graphic);
+    }));
   });
 
   scene3DMap.add(buildingGraphics);
 
-  // === Water surface ===
-  var dLat = 0.003;
-  var dLon = 0.0035;
-  var cx = center[0];
-  var cy = center[1];
+  // === Water surface — tight around the selected building ===
+  var dLat = 0.002;
+  var dLon = 0.0025;
+  var cx = camTarget[0];
+  var cy = camTarget[1];
 
   var waterPolygon = new Polygon({
     rings: [[
@@ -1080,45 +1105,23 @@ function buildParcel3DScene(center, risk, buildings, selectedOID) {
     symbolLayers: [
       new ExtrudeSymbol3DLayer({
         size: waterDepth,
-        material: { color: [0, 120, 200, 0.3] },
-        edges: {
-          type: 'solid',
-          color: [0, 100, 180, 0.4],
-          size: 0.5
-        }
+        material: { color: [30, 136, 229, 0.45] },
+        edges: { type: 'solid', color: [21, 101, 192, 0.6], size: 1 }
       })
     ]
-  });
-
-  var waterGraphic = new Graphic({
-    geometry: waterPolygon,
-    symbol: waterSymbol
   });
 
   var waterLayer = new GraphicsLayer({
     title: 'Flood Water',
     elevationInfo: { mode: 'on-the-ground' }
   });
-  waterLayer.add(waterGraphic);
+  waterLayer.add(new Graphic({ geometry: waterPolygon, symbol: waterSymbol }));
   scene3DMap.add(waterLayer);
 
-  // === Camera: close-in view focused on selected building ===
-  // Find the selected building centroid for camera target
-  var camTarget = center;
-  var selectedFeat = buildings.find(function(f) { return f.attributes.OBJECTID === selectedOID; });
-  if (selectedFeat && selectedFeat.geometry) {
-    camTarget = getBuildingCentroid(selectedFeat.geometry);
-  }
-
-  var selectedHeight = 10;
-  if (selectedFeat) {
-    selectedHeight = (selectedFeat.attributes.MaxHeight || 10) - (selectedFeat.attributes.MinHeight || 0);
-    if (selectedHeight < 5) selectedHeight = 5;
-  }
-
-  // Camera altitude scales with building height for good framing
-  var cameraAlt = Math.max(selectedHeight * 3, 150);
-  var cameraOffset = 0.001; // ~100m offset
+  // === Camera: tight, close to the building ===
+  // Much closer than Area 3D view for a property-level perspective
+  var cameraAlt = Math.max(selectedHeight * 2, 80);
+  var cameraOffset = 0.0006; // ~60m offset (much closer than area view)
 
   sceneView3D = new SceneView({
     container: 'sceneViewContainer',
@@ -1126,21 +1129,20 @@ function buildParcel3DScene(center, risk, buildings, selectedOID) {
     camera: {
       position: {
         longitude: camTarget[0] + cameraOffset,
-        latitude: camTarget[1] - cameraOffset * 1.2,
+        latitude: camTarget[1] - cameraOffset * 1.5,
         z: cameraAlt
       },
-      tilt: 65,
-      heading: 340
+      tilt: 70,
+      heading: 330
     },
     environment: {
-      atmosphere: {
-        quality: 'high'
-      },
+      atmosphere: { quality: 'high' },
       lighting: {
         type: 'sun',
         date: new Date(),
         directShadowsEnabled: true
-      }
+      },
+      background: { type: 'color', color: [30, 34, 45, 1] }
     },
     ui: {
       components: ['zoom', 'navigation-toggle', 'compass']
