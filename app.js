@@ -251,9 +251,20 @@ function clearSuburb() {
 // ======================
 // SUBURB BOUNDARY DISPLAY
 // ======================
+// Pending boundary request — if selectSuburb is called before the map
+// is initialised we store the name and draw it once the map is ready.
+var _pendingBoundary = null;
+
 function _showSuburbBoundary(suburbName) {
   var layer = window._suburbBoundaryLayer;
-  if (!layer) return;
+  var modules = window._esriModules;
+
+  // If the map hasn't loaded yet, queue the request
+  if (!layer || !modules) {
+    _pendingBoundary = suburbName;
+    return;
+  }
+  _pendingBoundary = null;
 
   // Clear any existing boundary
   layer.removeAll();
@@ -564,6 +575,11 @@ function initMap() {
       mapReady = true;
       console.log('Map ready');
 
+      // If a suburb was selected before the map loaded, draw it now
+      if (_pendingBoundary) {
+        _showSuburbBoundary(_pendingBoundary);
+      }
+
       // Click handler: show custom popup with 3D buttons when flood data is visible
       // Using a custom HTML popup instead of ArcGIS popup (v4.30 deprecated view.popup)
       mapView.popupEnabled = false;
@@ -573,16 +589,16 @@ function initMap() {
         // Store click point for 3D view centering
         window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
 
+        // Always select the suburb under the click
+        _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
+
+        // If flood data is visible, also show the detail popup
         if (currentFloodLayer) {
-          // Flood data is on the map — show the detail popup
           var lon = event.mapPoint.longitude.toFixed(5);
           var lat = event.mapPoint.latitude.toFixed(5);
           var riskLabel = selectedRisk || 'Unknown';
           var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '\u2014';
           _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon);
-        } else {
-          // No flood data yet — use click to select a suburb
-          _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
         }
       });
     });
@@ -651,11 +667,11 @@ function showOnMap() {
     document.getElementById('btn-view-3d').classList.add('visible');
   }
 
-  // If a suburb boundary is already displayed, we are already zoomed — just wait for layer
-  if (suburbBoundaryGraphic) {
-    currentFloodLayer.when(function() { _onFloodDataReady(); }, function() { _onFloodDataReady(); });
+  // Zoom to suburb boundary if available, otherwise geocode
+  if (suburbBoundaryGraphic && suburbBoundaryGraphic.geometry) {
+    view.goTo(suburbBoundaryGraphic.geometry.extent.expand(1.3), { duration: 600 })
+      .then(_onFloodDataReady).catch(_onFloodDataReady);
   } else {
-    // Fallback: geocode and zoom
     geocodeAndZoom(selectedSuburb, view).then(_onFloodDataReady).catch(_onFloodDataReady);
   }
 }
