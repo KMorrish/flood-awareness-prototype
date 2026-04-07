@@ -331,16 +331,12 @@ function _resetFloodState() {
 
   // Hide post-flood UI elements
   var el;
-  ['map-legend', 'source-section', 'historic-section'].forEach(function(id) {
+  ['map-legend', 'source-section', 'historic-section', 'panel-3d-section'].forEach(function(id) {
     el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
   el = document.getElementById('btn-view-3d');
   if (el) el.classList.remove('visible');
-
-  // Hide 3D panel section
-  el = document.getElementById('panel-3d-section');
-  if (el) el.style.display = 'none';
 }
 
 // ======================
