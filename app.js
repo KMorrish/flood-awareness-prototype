@@ -246,6 +246,7 @@ function clearSuburb() {
   searchClear.style.display = 'none';
   updateShowButton();
   _clearSuburbBoundary();
+  _resetFloodState();
 }
 
 // ======================
@@ -297,14 +298,6 @@ function _showSuburbBoundary(suburbName) {
     layer.add(graphic);
     suburbBoundaryGraphic = graphic;
 
-    // Show the boundary banner
-    var banner = document.getElementById('boundary-banner');
-    var bannerName = document.getElementById('boundary-banner-name');
-    if (banner && bannerName) {
-      bannerName.textContent = suburbName;
-      banner.classList.add('visible');
-    }
-
     // Zoom to the suburb boundary
     if (window._mapView) {
       window._mapView.goTo(polygon.extent.expand(1.3), { duration: 600 });
@@ -318,27 +311,36 @@ function _clearSuburbBoundary() {
   var layer = window._suburbBoundaryLayer;
   if (layer) layer.removeAll();
   suburbBoundaryGraphic = null;
-  // Hide the banner
-  var banner = document.getElementById('boundary-banner');
-  if (banner) banner.classList.remove('visible');
 }
 
-// Called when user clicks "Clear" on the boundary banner
-function clearBoundaryMode() {
-  _clearSuburbBoundary();
-
-  // Show a brief hint that they can now click for property 3D
-  if (currentFloodLayer) {
-    var hint = document.getElementById('map-click-hint');
-    if (hint) {
-      hint.classList.remove('visible');
-      // Re-trigger animation
-      void hint.offsetWidth;
-      hint.classList.add('visible');
-      // Remove after animation completes
-      setTimeout(function() { hint.classList.remove('visible'); }, 3200);
-    }
+// ======================
+// RESET FLOOD STATE
+// ======================
+function _resetFloodState() {
+  var view = window._mapView;
+  if (currentFloodLayer && view) {
+    view.map.remove(currentFloodLayer);
+    currentFloodLayer = null;
   }
+  // Remove historic layers
+  Object.values(historicLayers).forEach(function(l) {
+    if (view) view.map.remove(l);
+  });
+  historicLayers = {};
+  activeHistoric = {};
+
+  // Hide post-flood UI elements
+  var el;
+  ['map-legend', 'source-section', 'historic-section'].forEach(function(id) {
+    el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  el = document.getElementById('btn-view-3d');
+  if (el) el.classList.remove('visible');
+
+  // Hide 3D panel section
+  el = document.getElementById('panel-3d-section');
+  if (el) el.style.display = 'none';
 }
 
 // ======================
@@ -355,6 +357,10 @@ function _selectSuburbByMapClick(lon, lat) {
     if (!data.features || data.features.length === 0) return;
 
     var name = data.features[0].attributes.locality;
+
+    // Reset flood data if a new suburb is picked via map click
+    _resetFloodState();
+
     // Set the suburb in the search box and state
     selectedSuburb = name;
     if (suburbInput) {
@@ -386,14 +392,6 @@ function _selectSuburbByMapClick(lon, lat) {
 
     layer.add(graphic);
     suburbBoundaryGraphic = graphic;
-
-    // Show the boundary banner
-    var banner = document.getElementById('boundary-banner');
-    var bannerName = document.getElementById('boundary-banner-name');
-    if (banner && bannerName) {
-      bannerName.textContent = name;
-      banner.classList.add('visible');
-    }
 
     // Zoom to the suburb
     if (window._mapView) {
@@ -623,21 +621,12 @@ function initMap() {
       _createCustomPopup(mapView);
 
       mapView.on('click', function(event) {
-        // Store click point for 3D view centering
+        // Clicking the map always selects the suburb under the cursor,
+        // draws the boundary and zooms to it. This also clears any
+        // previously loaded flood layer so the user re-runs Show on Map
+        // for the new suburb — matching the Hawkesbury-Nepean UX.
         window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
-
-        if (!suburbBoundaryGraphic && currentFloodLayer) {
-          // Boundary cleared + flood data visible → property exploration mode
-          // Show the detail popup with Property 3D / Area 3D buttons
-          var lon = event.mapPoint.longitude.toFixed(5);
-          var lat = event.mapPoint.latitude.toFixed(5);
-          var riskLabel = selectedRisk || 'Unknown';
-          var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '\u2014';
-          _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon, event.mapPoint.longitude, event.mapPoint.latitude);
-        } else {
-          // Suburb selection mode — click to pick a suburb
-          _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
-        }
+        _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
       });
     });
   });
@@ -703,6 +692,9 @@ function showOnMap() {
     document.getElementById('source-section').style.display = 'block';
     document.getElementById('historic-section').style.display = 'block';
     document.getElementById('btn-view-3d').classList.add('visible');
+    // Show the Explore in 3D panel section
+    var s3d = document.getElementById('panel-3d-section');
+    if (s3d) s3d.style.display = 'block';
   }
 
   // Zoom to suburb boundary if available, otherwise geocode

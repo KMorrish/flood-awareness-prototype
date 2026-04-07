@@ -1152,6 +1152,45 @@ a:hover { color: var(--orange-hover); }
 }
 
 /* ============================================
+   PANEL 3D BUTTONS
+   ============================================ */
+.btn-3d-group {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-3d-property,
+.btn-3d-area {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  color: var(--white);
+  transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+.btn-3d-property {
+  background: var(--navy);
+}
+
+.btn-3d-area {
+  background: #3b5bdb;
+}
+
+.btn-3d-property:hover,
+.btn-3d-area:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+/* ============================================
    SUBURB BOUNDARY BANNER
    ============================================ */
 .boundary-banner {

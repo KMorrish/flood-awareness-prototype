@@ -221,6 +221,22 @@
               </button>
             </div>
           </div>
+
+          <!-- Explore in 3D -->
+          <div class="panel-section" id="panel-3d-section" style="display:none;">
+            <label class="panel-label">Explore in 3D</label>
+            <p class="panel-hint">Visualise flood depth against buildings in your area.</p>
+            <div class="btn-3d-group">
+              <button class="btn btn-3d-property" onclick="openParcel3DView()">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Property 3D
+              </button>
+              <button class="btn btn-3d-area" onclick="open3DView()">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+                Area 3D
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Mobile panel toggle -->
@@ -259,22 +275,7 @@
             <div class="legend-item legend-item-historic" id="legend-historic" style="display:none;"><span class="legend-swatch" style="background:#ef6c00;"></span> Historic Extent</div>
           </div>
         </div>
-        <!-- Suburb boundary banner -->
-        <div class="boundary-banner" id="boundary-banner">
-          <div class="boundary-banner-text">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span id="boundary-banner-name">Suburb selected</span>
-          </div>
-          <button class="boundary-banner-clear" onclick="clearBoundaryMode()" title="Clear boundary to explore properties">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            Clear
-          </button>
-        </div>
-        <!-- Click hint (shown briefly after clearing boundary) -->
-        <div class="map-click-hint" id="map-click-hint">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2z"/></svg>
-          Click the map to explore properties in 3D
-        </div>
+
         <!-- View in 3D button -->
         <button class="btn-view-3d" id="btn-view-3d" onclick="open3DView()" title="View current location in 3D">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
