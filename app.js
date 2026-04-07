@@ -14,6 +14,10 @@ let historicLayers = {};
 let activeHistoric = {};
 let currentSource = 'overall';
 let mapReady = false;
+let suburbBoundaryGraphic = null;
+
+// QLD Locality Boundaries — for suburb boundary display & map-click lookup
+const LOCALITY_SERVICE = 'https://spatial-gis.information.qld.gov.au/arcgis/rest/services/Basemaps/FoundationData/FeatureServer/6';
 
 // Service URLs
 const SERVICES = {
@@ -231,6 +235,8 @@ function selectSuburb(name) {
   searchDropdown.classList.remove('open');
   searchClear.style.display = 'flex';
   updateShowButton();
+  // Show the suburb boundary on the map
+  _showSuburbBoundary(name);
 }
 
 function clearSuburb() {
@@ -239,6 +245,115 @@ function clearSuburb() {
   searchDropdown.classList.remove('open');
   searchClear.style.display = 'none';
   updateShowButton();
+  _clearSuburbBoundary();
+}
+
+// ======================
+// SUBURB BOUNDARY DISPLAY
+// ======================
+function _showSuburbBoundary(suburbName) {
+  var layer = window._suburbBoundaryLayer;
+  if (!layer) return;
+
+  // Clear any existing boundary
+  layer.removeAll();
+
+  var queryUrl = LOCALITY_SERVICE + '/query?where=' +
+    encodeURIComponent("locality='" + suburbName + "' AND lga='Brisbane City'") +
+    '&outFields=locality&returnGeometry=true&outSR=4326&f=json';
+
+  fetch(queryUrl).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data.features || data.features.length === 0) return;
+
+    var feat = data.features[0];
+    var modules = window._esriModules;
+    if (!modules) return;
+
+    var polygon = new modules.Polygon({
+      rings: feat.geometry.rings,
+      spatialReference: { wkid: 4326 }
+    });
+
+    var graphic = new modules.Graphic({
+      geometry: polygon,
+      symbol: {
+        type: 'simple-fill',
+        color: [245, 124, 0, 0.08],
+        outline: { color: [245, 124, 0, 0.9], width: 2.5 }
+      }
+    });
+
+    layer.add(graphic);
+    suburbBoundaryGraphic = graphic;
+
+    // Zoom to the suburb boundary
+    if (window._mapView) {
+      window._mapView.goTo(polygon.extent.expand(1.3), { duration: 600 });
+    }
+  }).catch(function(err) {
+    console.warn('Suburb boundary query failed:', err);
+  });
+}
+
+function _clearSuburbBoundary() {
+  var layer = window._suburbBoundaryLayer;
+  if (layer) layer.removeAll();
+  suburbBoundaryGraphic = null;
+}
+
+// ======================
+// MAP-CLICK SUBURB SELECTION
+// ======================
+function _selectSuburbByMapClick(lon, lat) {
+  var queryUrl = LOCALITY_SERVICE + '/query?where=' +
+    encodeURIComponent("lga='Brisbane City'") +
+    '&geometry=' + encodeURIComponent(JSON.stringify({ x: lon, y: lat })) +
+    '&geometryType=esriGeometryPoint&spatialRel=esriSpatialRelIntersects' +
+    '&outFields=locality&returnGeometry=true&outSR=4326&f=json';
+
+  fetch(queryUrl).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data.features || data.features.length === 0) return;
+
+    var name = data.features[0].attributes.locality;
+    // Set the suburb in the search box and state
+    selectedSuburb = name;
+    if (suburbInput) {
+      suburbInput.value = name;
+      searchClear.style.display = 'flex';
+    }
+    updateShowButton();
+
+    // Draw the boundary
+    var layer = window._suburbBoundaryLayer;
+    var modules = window._esriModules;
+    if (!layer || !modules) return;
+
+    layer.removeAll();
+
+    var polygon = new modules.Polygon({
+      rings: data.features[0].geometry.rings,
+      spatialReference: { wkid: 4326 }
+    });
+
+    var graphic = new modules.Graphic({
+      geometry: polygon,
+      symbol: {
+        type: 'simple-fill',
+        color: [245, 124, 0, 0.08],
+        outline: { color: [245, 124, 0, 0.9], width: 2.5 }
+      }
+    });
+
+    layer.add(graphic);
+    suburbBoundaryGraphic = graphic;
+
+    // Zoom to the suburb
+    if (window._mapView) {
+      window._mapView.goTo(polygon.extent.expand(1.3), { duration: 600 });
+    }
+  }).catch(function(err) {
+    console.warn('Map-click suburb lookup failed:', err);
+  });
 }
 
 // ======================
@@ -416,9 +531,14 @@ function initMap() {
       SceneView, SceneLayer, GraphicsLayer, Graphic, Polygon, PolygonSymbol3D, ExtrudeSymbol3DLayer
     };
 
+    // Suburb boundary overlay layer
+    window._suburbBoundaryLayer = new GraphicsLayer({ title: 'Suburb Boundary' });
+
     const map = new Map({
       basemap: 'streets-navigation-vector'
     });
+
+    map.add(window._suburbBoundaryLayer);
 
     mapView = new MapView({
       container: 'mapView',
@@ -450,17 +570,20 @@ function initMap() {
       _createCustomPopup(mapView);
 
       mapView.on('click', function(event) {
-        if (!currentFloodLayer) return;
-
-        var lon = event.mapPoint.longitude.toFixed(5);
-        var lat = event.mapPoint.latitude.toFixed(5);
-        var riskLabel = selectedRisk || 'Unknown';
-        var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '\u2014';
-
         // Store click point for 3D view centering
         window._lastClickPoint = [event.mapPoint.longitude, event.mapPoint.latitude];
 
-        _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon, event.mapPoint.longitude, event.mapPoint.latitude);
+        if (currentFloodLayer) {
+          // Flood data is on the map — show the detail popup
+          var lon = event.mapPoint.longitude.toFixed(5);
+          var lat = event.mapPoint.latitude.toFixed(5);
+          var riskLabel = selectedRisk || 'Unknown';
+          var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '\u2014';
+          _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon);
+        } else {
+          // No flood data yet — use click to select a suburb
+          _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
+        }
       });
     });
   });
@@ -520,22 +643,21 @@ function showOnMap() {
 
   map.add(currentFloodLayer);
 
-  // Geocode suburb and zoom to it
-  geocodeAndZoom(selectedSuburb, view).then(() => {
+  function _onFloodDataReady() {
     document.getElementById('map-loading').style.display = 'none';
     document.getElementById('map-legend').style.display = 'block';
     document.getElementById('source-section').style.display = 'block';
     document.getElementById('historic-section').style.display = 'block';
-    // Show the View in 3D button
     document.getElementById('btn-view-3d').classList.add('visible');
-  }).catch(() => {
-    document.getElementById('map-loading').style.display = 'none';
-    document.getElementById('map-legend').style.display = 'block';
-    document.getElementById('source-section').style.display = 'block';
-    document.getElementById('historic-section').style.display = 'block';
-    // Show the View in 3D button
-    document.getElementById('btn-view-3d').classList.add('visible');
-  });
+  }
+
+  // If a suburb boundary is already displayed, we are already zoomed — just wait for layer
+  if (suburbBoundaryGraphic) {
+    currentFloodLayer.when(function() { _onFloodDataReady(); }, function() { _onFloodDataReady(); });
+  } else {
+    // Fallback: geocode and zoom
+    geocodeAndZoom(selectedSuburb, view).then(_onFloodDataReady).catch(_onFloodDataReady);
+  }
 }
 
 // ======================
