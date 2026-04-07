@@ -156,12 +156,15 @@ if (suburbInput) {
   suburbInput.addEventListener('input', function() {
     const val = this.value.trim().toLowerCase();
     highlightIndex = -1;
+
+    // Any new typing invalidates the previous selection — user must re-pick from dropdown
+    selectedSuburb = null;
+    updateShowButton();
+
     if (val.length < 1) {
       searchDropdown.classList.remove('open');
       searchDropdown.innerHTML = '';
       searchClear.style.display = 'none';
-      selectedSuburb = null;
-      updateShowButton();
       return;
     }
     searchClear.style.display = 'flex';
