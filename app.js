@@ -48,10 +48,10 @@ let sceneView3D = null;
 // Brisbane Buildings service URL
 const BRISBANE_BUILDINGS_URL = 'https://services1.arcgis.com/HrMiNYsSqqPpLTDE/arcgis/rest/services/Brisbane_buildings/FeatureServer/0';
 
-// Brisbane Buildings coverage extent (WGS84) — CBD + inner suburbs only
+// Brisbane Buildings coverage extent (WGS84) — inner Brisbane broadly
 const BUILDINGS_EXTENT = {
-  xmin: 153.0107, ymin: -27.4793,
-  xmax: 153.0547, ymax: -27.4338
+  xmin: 152.95, ymin: -27.55,
+  xmax: 153.10, ymax: -27.35
 };
 
 // Risk colours
@@ -633,7 +633,7 @@ function initMap() {
           var lat = event.mapPoint.latitude.toFixed(5);
           var riskLabel = selectedRisk || 'Unknown';
           var depthLabel = RISK_DEPTHS[riskLabel] ? RISK_DEPTHS[riskLabel] + 'm' : '\u2014';
-          _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon);
+          _showCustomPopup(mapView, event.mapPoint, selectedSuburb || 'Selected Location', riskLabel, depthLabel, lat, lon, event.mapPoint.longitude, event.mapPoint.latitude);
         } else {
           // Suburb selection mode — click to pick a suburb
           _selectSuburbByMapClick(event.mapPoint.longitude, event.mapPoint.latitude);
